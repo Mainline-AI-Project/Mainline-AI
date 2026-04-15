@@ -24,7 +24,7 @@ interface Chat {
 @Component({
   selector: 'app-guest-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, LandingComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './guest-chat.component.html',
   styleUrls: ['./guest-chat.component.css']
 })
