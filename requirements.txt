@@ -63,4 +63,8 @@ colorama==0.4.6
 Werkzeug==3.0.3
 jwt==1.4.0
 pypdf==6.7.1
-sentence_transformers==5.2.3
+faiss-cpu
+PyMuPDF
+torch
+sentence-transformers
+
