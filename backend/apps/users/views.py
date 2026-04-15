@@ -171,6 +171,11 @@ from django.http import JsonResponse
 import json
 from .rag import query_rag
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.core.mail import send_mail
+from django.conf import settings
+
 
 @csrf_exempt
 @api_view(["POST"])
@@ -375,3 +380,73 @@ def rag_query(request):
         response_text = query_rag(user_text)
         return JsonResponse({"response": response_text})
     return JsonResponse({"error": "POST only"}, status=400)
+
+@csrf_exempt
+@require_POST
+def forgot_password(request):
+    """Receive email, send reset link if user exists."""
+    try:
+        data = json.loads(request.body)
+        email = data.get("email", "").strip().lower()
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "Invalid request body."}, status=400)
+
+    if not email:
+        return JsonResponse({"error": "Email is required."}, status=400)
+
+    # Always return 200 to avoid leaking whether an email is registered
+    try:
+        user = User.objects.get(email=email)
+        token = user.generate_reset_token()
+
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
+        send_mail(
+            subject="Reset your Mainline-AI password",
+            message=(
+                f"Hi {user.name or user.username},\n\n"
+                f"Click the link below to reset your password. "
+                f"It expires in 1 hour.\n\n{reset_url}\n\n"
+                f"If you didn't request this, you can ignore this email."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except User.DoesNotExist:
+        pass  # Don't reveal that email doesn't exist
+
+    return JsonResponse({
+        "message": "If that email is registered, a reset link has been sent."
+    })
+
+
+@csrf_exempt
+@require_POST
+def reset_password(request):
+    """Validate token and update the user's password."""
+    try:
+        data = json.loads(request.body)
+        token = data.get("token", "").strip()
+        new_password = data.get("password", "")
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "Invalid request body."}, status=400)
+
+    if not token or not new_password:
+        return JsonResponse({"error": "Token and password are required."}, status=400)
+
+    if len(new_password) < 8:
+        return JsonResponse({"error": "Password must be at least 8 characters."}, status=400)
+
+    try:
+        user = User.objects.get(reset_token=token)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Invalid or expired reset link."}, status=400)
+
+    if not user.is_reset_token_valid(token):
+        return JsonResponse({"error": "This reset link has expired."}, status=400)
+
+    user.set_password(new_password)
+    user.clear_reset_token()
+
+    return JsonResponse({"message": "Password updated successfully."})

@@ -165,13 +165,13 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './landing.component.html',
-  styleUrls: ['./landing.component.css']
+  styleUrls: ['./landing.component.css'],
 })
 export class LandingComponent {
 
   // ---------------- FLOW STATE ----------------
   mode: 'login' | 'signup' = 'login';
-  step: 'auth' | 'plan' = 'auth';
+  step: 'auth' | 'plan' | 'forgot' | 'reset' = 'auth';
 
   selectedPlan: 'student' | 'professional' | 'enterprise' | null = null;
 
@@ -189,6 +189,11 @@ export class LandingComponent {
   passwordStrength: 'very-weak' | 'weak' | 'so-so' | 'good' | 'great' | null = null;
   passwordStrengthLabel = '';
   passwordMismatch = false;
+
+  forgotStep: 'form' | 'sent' = 'form';
+  forgotEmail = '';
+  resetToken = '';
+  resetForm = { password: '', confirmPassword: '' };
 
   constructor(
     private auth: AuthService,
@@ -358,4 +363,51 @@ checkPasswordMatch() {
   private isAcademicEmail(email: string): boolean {
     return /@.+\.(edu|ac(\.[a-z]{2})?)$/i.test(email);
   }
+
+
+  ngOnInit(): void {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (token) {
+    this.resetToken = token;
+    this.step = 'reset';      // new step name (see template below)
+  }
 }
+
+goToForgotPassword(): void {
+  this.step = 'forgot';       // new step name
+  this.forgotStep = 'form';
+  this.error = '';
+}
+
+submitForgotPassword(): void {
+  if (!this.forgotEmail) { this.error = 'Please enter your email.'; return; }
+  this.error = '';
+
+  this.auth.forgotPassword(this.forgotEmail).subscribe({
+    next: () => { this.forgotStep = 'sent'; },
+    error: (err) => { this.error = err.error?.error || 'Something went wrong.'; }
+  });
+}
+
+submitResetPassword(): void {
+  if (this.resetForm.password !== this.resetForm.confirmPassword) {
+    this.error = 'Passwords do not match.'; return;
+  }
+  if (this.resetForm.password.length < 8) {
+    this.error = 'Password must be at least 8 characters.'; return;
+  }
+  this.error = '';
+
+  this.auth.resetPassword(this.resetToken, this.resetForm.password).subscribe({
+    next: () => {
+      this.step = 'auth';
+      this.mode = 'login';
+      // Optionally show a success banner here
+    },
+    error: (err) => { this.error = err.error?.error || 'Something went wrong.'; }
+  });
+}
+}
+
+

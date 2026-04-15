@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -47,6 +48,17 @@ login(data: any) {
 
   googleLogin(token: string) {
   return this.http.post<any>('http://127.0.0.1:8000/api/google-auth/', { token });
+  }
+
+  private apiUrl = 'http://localhost:8000/api'; // match your Django dev server
+
+
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/forgot-password/`, { email });
+  }
+
+  resetPassword(token: string, password: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/reset-password/`, { token, password });
   }
 
 }

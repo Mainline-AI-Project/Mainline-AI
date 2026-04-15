@@ -30,6 +30,17 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# settings.py
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'          # or your SMTP provider
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your@email.com'
+EMAIL_HOST_PASSWORD = 'your-app-password'
+DEFAULT_FROM_EMAIL = 'Mainline-AI <your@email.com>'
+
+FRONTEND_URL = 'http://localhost:4200'  # your Angular app URL
+
 
 # Application definition
 

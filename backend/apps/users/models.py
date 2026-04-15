@@ -1,6 +1,7 @@
 import mongoengine as me
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+import secrets
 
 class Message(me.EmbeddedDocument):
     text = me.StringField(required=True)
@@ -31,6 +32,26 @@ class User(me.Document):
 
     def check_password(self, raw):
         return check_password_hash(self.password_hash, raw)
+    
+    def generate_reset_token(self):
+        """Generate a secure token valid for 1 hour."""
+        self.reset_token = secrets.token_urlsafe(32)
+        self.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
+        self.save()
+        return self.reset_token
+
+    def is_reset_token_valid(self, token):
+        """Check token matches and hasn't expired."""
+        return (
+            self.reset_token == token
+            and self.reset_token_expiry
+            and datetime.utcnow() < self.reset_token_expiry
+        )
+
+    def clear_reset_token(self):
+        self.reset_token = None
+        self.reset_token_expiry = None
+        self.save()
 
 
 # import mongoengine as me
