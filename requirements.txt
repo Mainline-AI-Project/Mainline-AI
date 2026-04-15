@@ -61,3 +61,4 @@ scipy==1.15.2
 rich==14.0.0
 colorama==0.4.6
 Werkzeug==3.0.3
+jwt==1.4.0
