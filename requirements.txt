@@ -45,7 +45,7 @@ typing_extensions==4.13.2
 # BASIC UTILITIES
 # ======================
 numpy==2.1.0
-pandas==2.2.2
+pandas==3.0.2
 tqdm==4.67.1
 joblib==1.4.2
 
