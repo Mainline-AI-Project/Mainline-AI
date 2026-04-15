@@ -16,7 +16,7 @@ import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-ALLOWED_HOSTS = ['*']  # For testing, ideally use your Heroku app domain
+# ALLOWED_HOSTS = ['*']  # For testing, ideally use your Heroku app domain
 MONGO_URI = os.environ.get("MONGO_URI")
 
 # Quick-start development settings - unsuitable for production
@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-@njm1$55l!a23z+zllzfaer23k%dc$dg0d22jlnw*be^an!83@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["mainline-ai-backend.herokuapp.com", "localhost", "127.0.0.1"]
 
 # settings.py
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
