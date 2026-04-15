@@ -11,5 +11,5 @@ urlpatterns = [
     path("api/auth/forgot-password/", views.forgot_password, name="forgot_password"),
     path("api/auth/reset-password/",  views.reset_password,  name="reset_password"),
     path('admin/', admin.site.urls),
-    path('', TemplateView.as_view(template_name='static/frontend/browser/index.html')),
+    path('', TemplateView.as_view(template_name='static/frontend/frontend/browser/index.html')),
 ]
