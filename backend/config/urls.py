@@ -14,4 +14,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     re_path(r"^(?!api/).*", TemplateView.as_view(template_name="frontend/index.html")),
+    path('/assets/', document_root="frontend/assets")
+
 ]

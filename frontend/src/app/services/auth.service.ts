@@ -50,7 +50,8 @@ login(data: any) {
   return this.http.post<any>('http://127.0.0.1:8000/api/google-auth/', { token });
   }
 
-  private apiUrl = 'http://localhost:8000/api'; // match your Django dev server
+  // private apiUrl = 'http://localhost:8000/api'; // match your Django dev server
+  private apiUrl = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/api'
 
 
   forgotPassword(email: string): Observable<any> {
