@@ -48,6 +48,8 @@ numpy==2.1.0
 pandas==3.0.2
 tqdm==4.67.1
 joblib==1.4.2
+Werkzeug==3.0.3
+jwt==1.4.0
 
 # ======================
 # OPTIONAL (LIGHT ML ONLY)
@@ -60,11 +62,13 @@ scipy==1.15.2
 # ======================
 rich==14.0.0
 colorama==0.4.6
-Werkzeug==3.0.3
-jwt==1.4.0
-pypdf==6.7.1
-faiss-cpu
-PyMuPDF
-torch
-sentence-transformers
+
+# ======================
+# RAG
+# ======================
+# pypdf==6.7.1
+# faiss-cpu
+# PyMuPDF
+# torch
+# sentence-transformers
 
