@@ -1,0 +1,9 @@
+{
+  "routes": {
+    "/": {},
+    "/chat": {},
+    "/login": {},
+    "/select-plan": {},
+    "/signup": {}
+  }
+}

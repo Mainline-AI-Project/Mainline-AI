@@ -1,0 +1,121 @@
+<div class="container">
+
+  <!-- ================= PLAN SELECTION ================= -->
+  <div class="card" *ngIf="step === 'plan'">
+    <h1>Mainline-AI</h1>
+    <h6>Choose how you'll use Mainline-AI</h6>
+
+    <div class="plans">
+      <div class="plan-card" (click)="selectPlan('student')">
+        <h3>Student / Researcher</h3>
+        <p>Academic access and research tools</p>
+      </div>
+
+      <div class="plan-card" (click)="selectPlan('professional')">
+        <h3>Professional</h3>
+        <p>Advanced tools for individuals</p>
+      </div>
+
+      <div class="plan-card" (click)="selectPlan('enterprise')">
+        <h3>Institution / Enterprise</h3>
+        <p>Teams and organisations</p>
+      </div>
+    </div>
+
+    <div>
+      <button (click)="goToGuestMode()">Continue as guest</button>
+    </div>
+  </div>
+
+  
+
+  <!-- ================= AUTH ================= -->
+  <div class="card" *ngIf="step === 'auth'">
+    <h1>Mainline-AI</h1>
+
+    <h2 *ngIf="mode==='login'">Sign in</h2>
+    <h2 *ngIf="mode==='signup'">Create account</h2>
+
+    <p class="selected-plan" *ngIf="mode==='signup' && selectedPlan">
+      {{ selectedPlanLabel }} <a (click)="step='plan'">Change</a>
+    </p>
+
+    <form (ngSubmit)="submit()" novalidate>
+
+      <!-- LOGIN -->
+      <ng-container *ngIf="mode==='login'">
+        <input
+          type="text"
+          placeholder="Username or Email"
+          [(ngModel)]="form.identifier"
+          name="identifier"
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          [(ngModel)]="form.password"
+          name="loginPassword"
+          required
+        />
+      </ng-container>
+
+      <!-- SIGNUP -->
+      <ng-container *ngIf="mode==='signup'">
+        <input type="text" placeholder="Full name" [(ngModel)]="form.name" name="name" />
+        <input type="email" placeholder="Email" [(ngModel)]="form.email" name="email" required />
+        <input type="text" placeholder="Username (optional)" [(ngModel)]="form.username" name="username" />
+
+        <input
+          type="password"
+          placeholder="Password"
+          [(ngModel)]="form.password"
+          name="signupPassword"
+          required
+          (input)="checkPasswordStrength(form.password)"
+        />
+
+        <input
+          type="password"
+          placeholder="Confirm password"
+          [(ngModel)]="form.confirmPassword"
+          name="confirmPassword"
+          required
+          (input)="checkPasswordMatch()"
+        />
+
+        <div class="password-strength" *ngIf="passwordStrength">
+        <div class="strength-bar">
+          <span [class]="passwordStrength"></span>
+        </div>
+
+        <!-- <span class="strength-label" [class]="passwordStrength">
+          {{ passwordStrengthLabel }}
+        </span> -->
+      </div>
+
+      <div class="password-mismatch" *ngIf="passwordMismatch">
+        Passwords do not match
+      </div>
+
+
+      </ng-container>
+
+      <button type="submit">
+        {{ mode === 'login' ? 'Sign in' : 'Sign up' }}
+      </button>
+    </form>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+
+    <p class="switch">
+      <span *ngIf="mode==='login'">
+        Don't have an account? <a (click)="goToSignup()">Sign up</a>
+      </span>
+      <span *ngIf="mode==='signup'">
+        Already have an account? <a (click)="mode='login'; step='auth'">Sign in</a>
+      </span>
+    </p>
+  </div>
+
+</div>
