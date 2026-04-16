@@ -1,10 +1,10 @@
 {
   "routes": {
-    "/static": {},
-    "/static/chat": {},
-    "/static/login": {},
-    "/static/reset-password": {},
-    "/static/select-plan": {},
-    "/static/signup": {}
+    "/": {},
+    "/chat": {},
+    "/login": {},
+    "/reset-password": {},
+    "/select-plan": {},
+    "/signup": {}
   }
 }
