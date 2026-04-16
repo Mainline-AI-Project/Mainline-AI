@@ -1,6 +1,6 @@
 
 export default {
-  basePath: '/',
+  basePath: '/static',
   supportedLocales: {
   "en-US": ""
 },
