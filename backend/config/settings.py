@@ -122,20 +122,41 @@ REST_FRAMEWORK = {
 #     }
 # }
 
+# import mongoengine
+
+# DB_USER = os.environ.get("DB_USER", "mainline_db_user")
+# DB_PASSWORD = os.environ.get("DB_PASSWORD", "mainline-ai-password")  # Replace with your actual password or env var
+# DB_NAME = os.environ.get("DB_NAME", "mainline_ai")              # Database name (no hyphens!)
+# DB_CLUSTER = os.environ.get("DB_CLUSTER", "mainline-ai.qeib3io.mongodb.net")
+
+# # ----------------------------
+# # MongoEngine Connection
+# # ----------------------------
+# mongoengine.connect(
+#     db=DB_NAME,
+#     host=f"mongodb+srv://{DB_USER}:{DB_PASSWORD}@{DB_CLUSTER}/{DB_NAME}?retryWrites=true&w=majority"
+# )
+
 import mongoengine
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 DB_USER = os.environ.get("DB_USER", "mainline_db_user")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "mainline-ai-password")  # Replace with your actual password or env var
-DB_NAME = os.environ.get("DB_NAME", "mainline_ai")              # Database name (no hyphens!)
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "mainline-ai-password")
+DB_NAME = os.environ.get("DB_NAME", "mainline-ai")
 DB_CLUSTER = os.environ.get("DB_CLUSTER", "mainline-ai.qeib3io.mongodb.net")
 
-# ----------------------------
-# MongoEngine Connection
-# ----------------------------
-mongoengine.connect(
-    db=DB_NAME,
-    host=f"mongodb+srv://{DB_USER}:{DB_PASSWORD}@{DB_CLUSTER}/{DB_NAME}?retryWrites=true&w=majority"
-)
+MONGO_URI = f"mongodb+srv://{DB_USER}:{DB_PASSWORD}@{DB_CLUSTER}/{DB_NAME}?retryWrites=true&w=majority"
+
+try:
+    mongoengine.disconnect_all()  # Prevents "connection already exists" errors on hot reload
+    mongoengine.connect(host=MONGO_URI)  # ← only pass host, db is inferred from the URI
+    logger.info("✅ MongoDB connected successfully")
+except Exception as e:
+    logger.error(f"❌ MongoDB connection failed: {e}")
+    raise  # Raise so Heroku logs show the real error
 
 # mongoengine.connect(
 #     db="mainline_ai",

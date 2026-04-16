@@ -12,8 +12,8 @@ export default `<!DOCTYPE html><html lang="en" data-beasties-container><head><li
 <body>
   <app-root ng-version="21.1.1" _nghost-ng-c1891414873 ng-server-context="ssg"><router-outlet _ngcontent-ng-c1891414873></router-outlet><app-landing _nghost-ng-c2916361882><div _ngcontent-ng-c2916361882 class="container"><!----><!----><!----><!----></div></app-landing><!----></app-root>
      <footer *ngif="showFooter" id="main-footer">
-      <img class="university-logo" src="assets/light-mode/UniLogoLightMode.png" alt="University logo">
-      <img class="colab-logo" src="assets/light-mode/VinsonLogoLightMode.png" alt="Vinson logo">
+      <img class="university-logo" src="/static/frontend/assets/light-mode/UniLogoLightMode.png" alt="University logo">
+      <img class="colab-logo" src="/static/frontend/assets/light-mode/VinsonLogoLightMode.png" alt="Vinson logo">
   </footer>
 
 

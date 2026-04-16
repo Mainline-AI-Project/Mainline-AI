@@ -17,8 +17,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
  # Angular fallback LAST
-    re_path(r"^(?!api/).*",
-            TemplateView.as_view(template_name="frontend/index.html")),
+    re_path(r'^(?!api/|admin/|static/).*$', TemplateView.as_view(
+        template_name='frontend/index.html'
+    )),
 ]
 
 # ADD THIS

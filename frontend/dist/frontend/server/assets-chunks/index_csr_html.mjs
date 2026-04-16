@@ -13,8 +13,8 @@ export default `<!doctype html>
 <body ngcm="">
   <app-root></app-root>
      <footer *ngif="showFooter" id="main-footer">
-      <img class="university-logo" src="assets/light-mode/UniLogoLightMode.png" alt="University logo">
-      <img class="colab-logo" src="assets/light-mode/VinsonLogoLightMode.png" alt="Vinson logo">
+      <img class="university-logo" src="/static/frontend/assets/light-mode/UniLogoLightMode.png" alt="University logo">
+      <img class="colab-logo" src="/static/frontend/assets/light-mode/VinsonLogoLightMode.png" alt="Vinson logo">
   </footer>
 
 
