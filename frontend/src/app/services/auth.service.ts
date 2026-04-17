@@ -20,11 +20,11 @@ export class AuthService {
 //   }
 
 signup(data: any) {
-  return this.http.post<any>(`http://localhost:8000/api/users/signup/`, data);
+  return this.http.post<any>(`https://mainline-ai-bf583cb75ac1.herokuapp.com/api/users/signup/`, data);
 }
 
 login(data: any) {
-  return this.http.post<any>(`http://localhost:8000/api/users/login/`, data);
+  return this.http.post<any>(`https://mainline-ai-bf583cb75ac1.herokuapp.com//api/users/login/`, data);
 }
 
 
