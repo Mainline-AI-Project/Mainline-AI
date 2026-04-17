@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private API = 'http://localhost:8000/api/users';
+  private API = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/api/users';
   private TOKEN_KEY = 'token';
   private USER_KEY = 'user';
 
@@ -24,7 +24,7 @@ signup(data: any) {
 }
 
 login(data: any) {
-  return this.http.post<any>(`https://mainline-ai-bf583cb75ac1.herokuapp.com//api/users/login/`, data);
+  return this.http.post<any>(`https://mainline-ai-bf583cb75ac1.herokuapp.com/api/users/login/`, data);
 }
 
 
@@ -46,9 +46,9 @@ login(data: any) {
     this.router.navigate(['/']);
   }
 
-  googleLogin(token: string) {
-  return this.http.post<any>('http://127.0.0.1:8000/api/google-auth/', { token });
-  }
+  // googleLogin(token: string) {
+  // return this.http.post<any>('http://127.0.0.1:8000/api/google-auth/', { token });
+  // }
 
   // private apiUrl = 'http://localhost:8000/api'; // match your Django dev server
   private apiUrl = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/api'
