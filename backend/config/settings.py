@@ -39,7 +39,7 @@ EMAIL_HOST_USER = 'your@email.com'
 EMAIL_HOST_PASSWORD = 'your-app-password'
 DEFAULT_FROM_EMAIL = 'Mainline-AI <your@email.com>'
 
-FRONTEND_URL = 'http://localhost:4200'  # your Angular app URL
+FRONTEND_URL = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/'  # your Angular app URL
 
 
 # Application definition
@@ -64,6 +64,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:4200",
 # ]
+
+DEBUG = True
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

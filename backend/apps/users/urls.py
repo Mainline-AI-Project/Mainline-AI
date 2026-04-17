@@ -1,6 +1,9 @@
 from django.urls import path
-from .views import signup_user, login_user, get_chats, start_new_chat, add_message,delete_chat, pin_chat
 from . import views
+from .views import (
+    signup_user, login_user, get_chats, start_new_chat,
+    add_message, delete_chat, pin_chat
+)
 
 urlpatterns = [
     path("signup/", signup_user),
@@ -9,6 +12,8 @@ urlpatterns = [
     path("chats/<str:username>/new/", start_new_chat),
     path("chats/<str:username>/<str:chat_id>/add/", add_message),
     path("chats/<str:username>/<str:chat_id>/delete/", delete_chat),
-    path('chats/<str:username>/<str:chat_id>/pin/', pin_chat),
-    path('api/query/', views.rag_query),
+    path("chats/<str:username>/<str:chat_id>/pin/", pin_chat),
+    path("query/", views.rag_query),          # ← removed duplicate 'api/' prefix
+    path("forgot-password/", views.forgot_password),   # ← was missing
+    path("reset-password/", views.reset_password),     # ← was missing
 ]
