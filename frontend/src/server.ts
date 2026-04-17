@@ -37,17 +37,6 @@ app.use(
   }),
 );
 
-// 🔥 Proxy API requests to backend
-app.use(
-  '/api',
-  createProxyMiddleware({
-    target: 'https://mainline-ai-bf583cb75ac1.herokuapp.com', // <-- CHANGE THIS
-    changeOrigin: true,
-    secure: true,
-  }),
-);
-
-
 /**
  * Handle all other requests by rendering the Angular application.
  */

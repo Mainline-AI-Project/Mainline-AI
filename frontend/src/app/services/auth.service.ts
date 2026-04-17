@@ -76,7 +76,7 @@ interface AuthResponse {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private API = '/api';
+  private API = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/api';
   private TOKEN_KEY = 'token';
   private USER_KEY = 'user';
 
