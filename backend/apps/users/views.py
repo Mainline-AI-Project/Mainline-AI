@@ -478,6 +478,7 @@ import traceback
 from .models import User, Chat, Message
 from .jwt_utils import create_jwt
 from .rag import query_rag
+import logging
 
 
 @csrf_exempt
@@ -650,6 +651,7 @@ def rag_query(request):
         return JsonResponse({"response": response_text})
     return JsonResponse({"error": "POST only"}, status=400)
 
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 @require_POST
@@ -665,24 +667,33 @@ def forgot_password(request):
 
     try:
         user = User.objects.get(email=email)
+
         token = user.generate_reset_token()
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
         send_mail(
             subject="Reset your Mainline-AI password",
             message=(
                 f"Hi {user.name or user.username},\n\n"
-                f"Click the link below to reset your password. "
-                f"It expires in 1 hour.\n\n{reset_url}\n\n"
-                f"If you didn't request this, you can ignore this email."
+                f"Reset your password here:\n\n{reset_url}\n\n"
+                f"This link expires in 1 hour."
             ),
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
-            fail_silently=False,
+            fail_silently=False,  # IMPORTANT
         )
-    except Exception:
-        pass  # Don't reveal if email doesn't exist
 
-    return JsonResponse({"message": "If that email is registered, a reset link has been sent."})
+    except User.DoesNotExist:
+        # security: don't reveal user existence
+        pass
+
+    except Exception as e:
+        logger.error(f"EMAIL FAILED: {str(e)}")
+        return JsonResponse({"error": "Email service failed."}, status=500)
+
+    return JsonResponse({
+        "message": "If that email is registered, a reset link has been sent."
+    })
 
 
 @csrf_exempt
