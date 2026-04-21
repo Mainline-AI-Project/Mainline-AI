@@ -128,14 +128,27 @@ CORS_ALLOW_ALL_ORIGINS = True
 # -----------------------------
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your@email.com'
-EMAIL_HOST_PASSWORD = 'your-app-password'
-DEFAULT_FROM_EMAIL = 'Mainline-AI <your@email.com>'
+
+EMAIL_HOST_USER = 'apikey'
+EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
+
+DEFAULT_FROM_EMAIL = 'Mainline AI <no-reply@mainline-ai.com>'
 
 FRONTEND_URL = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/'
+
+
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your@email.com'
+# EMAIL_HOST_PASSWORD = 'your-app-password'
+# DEFAULT_FROM_EMAIL = 'Mainline-AI <your@email.com>'
+
+# FRONTEND_URL = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/'
 
 # -----------------------------
 # STATIC FILES
