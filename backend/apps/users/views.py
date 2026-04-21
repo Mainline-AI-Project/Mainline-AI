@@ -476,7 +476,7 @@ import json
 import traceback
 
 from .models import User, Chat, Message
-from .jwt import create_jwt
+from .jwt_utils import create_jwt
 from .rag import query_rag
 
 
