@@ -10,7 +10,7 @@ export class RagService {
 
   queryRag(text: string) {
     return this.http.post<{ response: string }>(
-      'http://127.0.0.1:8000/api/query/',
+      'https://mainline-ai-bf583cb75ac1.herokuapp.com/api/query/',
       { text },
       { headers: { 'Content-Type': 'application/json' } }
     );

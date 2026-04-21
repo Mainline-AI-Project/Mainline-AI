@@ -34,7 +34,7 @@ export class ChatComponent implements OnInit {
   otherChats: Chat[] = [];
   currentChat: Chat | null = null;
   newMessage: string = '';
-  API = 'http://127.0.0.1:8000/api/users';
+  API = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/api/users';
   icons = { Pin, Trash2 };
 
   showDeleteModal: boolean = false;
