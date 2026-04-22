@@ -479,11 +479,6 @@ from .models import User, Chat, Message
 from .jwt_utils import create_jwt, token_generator
 from .rag import query_rag
 import logging
-from django.utils.http import urlsafe_base64_decode
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import User
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
 
 
 @csrf_exempt
@@ -664,45 +659,59 @@ def forgot_password(request):
     data = json.loads(request.body)
     email = data.get("email")
 
-    try:
-        user = User.objects.get(email=email)
+    if not email:
+        return JsonResponse({"error": "Email required"}, status=400)
 
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = token_generator.make_token(user)
+    user = User.objects(email=email).first()  # 👈 MongoEngine query
 
-        reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
+    # Always return same response (security best practice)
+    if not user:
+        return JsonResponse({"message": "If email exists, reset link sent"})
 
-        send_mail(
-            "Password Reset Request",
-            f"Click here to reset your password:\n{reset_link}",
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-        )
+    token = user.generate_reset_token()
 
-        return JsonResponse({"message": "Email sent"})
+    uid = str(user.id)
 
-    except User.DoesNotExist:
-        return JsonResponse({"message": "If email exists, reset link sent"})  # security best practice
+    reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
+
+    send_mail(
+        subject="Password Reset Request",
+        message=f"Click here to reset your password:\n{reset_link}",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+    return JsonResponse({"message": "Email sent"})
 
 @csrf_exempt
 def reset_password(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
 
-        uid = data.get('uid')
-        token = data.get('token')
-        password = data.get('password')
+    data = json.loads(request.body)
 
-        try:
-            user_id = urlsafe_base64_decode(uid).decode()
-            user = User.objects.get(pk=user_id)
+    uid = data.get("uid")
+    token = data.get("token")
+    password = data.get("password")
 
-            if token_generator.check_token(user, token):
-                user.password = make_password(password)
-                user.save()
-                return JsonResponse({'message': 'Password reset successful'})
-            else:
-                return JsonResponse({'error': 'Invalid token'}, status=400)
+    if not all([uid, token, password]):
+        return JsonResponse({"error": "Missing fields"}, status=400)
 
-        except Exception:
-            return JsonResponse({'error': 'Invalid request'}, status=400)
+    try:
+        user = User.objects(id=uid).first()  # MongoEngine lookup
+
+        if not user:
+            return JsonResponse({"error": "Invalid user"}, status=400)
+
+        if not user.is_reset_token_valid(token):
+            return JsonResponse({"error": "Invalid or expired token"}, status=400)
+
+        user.set_password(password)
+        user.clear_reset_token()
+        user.save()
+
+        return JsonResponse({"message": "Password reset successful"})
+
+    except Exception as e:
+        return JsonResponse({"error": "Invalid request"}, status=400)
