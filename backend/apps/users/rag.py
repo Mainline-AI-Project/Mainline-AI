@@ -2,7 +2,8 @@ import os
 import re
 import time
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from pypdf import PdfReader
 from rank_bm25 import BM25Okapi
 
@@ -183,23 +184,22 @@ def retrieve(
 # Gemini inference
 # ---------------------------------------------------------------------------
 
-GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
-_gemini_model = None
+_gemini_client = None
 
 
-def _get_gemini_model():
-    global _gemini_model
-    if _gemini_model is None:
+def _get_client() -> genai.Client:
+    global _gemini_client
+    if _gemini_client is None:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise RuntimeError(
                 "GEMINI_API_KEY environment variable is not set.\n"
-                "Add it to Heroku with:  heroku config:set GEMINI_API_KEY=your-key"
+                "Add it with:  heroku config:set GEMINI_API_KEY=your-key"
             )
-        genai.configure(api_key=api_key)
-        _gemini_model = genai.GenerativeModel(GEMINI_MODEL)
-    return _gemini_model
+        _gemini_client = genai.Client(api_key=api_key)
+    return _gemini_client
 
 
 def generate_answer_gemini(
@@ -217,15 +217,16 @@ def generate_answer_gemini(
         "Provide ONLY the answer — no question, no context, no explanation."
     )
 
-    generation_config = genai.types.GenerationConfig(
-        temperature=temperature,
-        max_output_tokens=1024,
-    )
-
     t0 = time.perf_counter()
     try:
-        model = _get_gemini_model()
-        response = model.generate_content(prompt, generation_config=generation_config)
+        response = _get_client().models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=temperature,
+                max_output_tokens=1024,
+            ),
+        )
         answer = response.text.strip()
     except Exception as exc:
         return f"Error calling Gemini API: {exc}", {}
@@ -234,7 +235,7 @@ def generate_answer_gemini(
 
     timing = {
         "total_s": round(total_s, 2),
-        "prompt_tokens": 0,   # Gemini free tier doesn't expose token counts easily
+        "prompt_tokens": 0,
         "eval_tokens": 0,
         "tokens_per_s": 0,
     }
