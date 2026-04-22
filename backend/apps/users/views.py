@@ -476,13 +476,12 @@ import json
 import traceback
 
 from .models import User, Chat, Message
-from .jwt_utils import create_jwt
+from .jwt_utils import create_jwt, token_generator
 from .rag import query_rag
 import logging
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
-from .utils import token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 
