@@ -2,13 +2,9 @@ import os
 import re
 import time
 
-import faiss
-import fitz
-import numpy as np
-import pandas as pd
-import requests
-import torch
-from sentence_transformers import SentenceTransformer
+import anthropic
+from pypdf import PdfReader
+from rank_bm25 import BM25Okapi
 
 
 # ---------------------------------------------------------------------------
@@ -16,13 +12,7 @@ from sentence_transformers import SentenceTransformer
 # ---------------------------------------------------------------------------
 
 class Timer:
-    """Simple context manager for timing any block of code.
-
-    Usage:
-        with Timer("Building index"):
-            build_index(...)
-        # prints: [Building index] 12.34s
-    """
+    """Simple context manager for timing any block of code."""
     def __init__(self, label: str):
         self.label = label
         self.elapsed: float = 0.0
@@ -37,7 +27,7 @@ class Timer:
 
 
 # ---------------------------------------------------------------------------
-# Text cleaning helpers
+# Text cleaning helpers  (unchanged logic)
 # ---------------------------------------------------------------------------
 
 def clean_text(text: str) -> str:
@@ -111,7 +101,7 @@ def preprocess_pdf_text(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# PDF loading
+# PDF loading  — uses pypdf instead of PyMuPDF (fitz)
 # ---------------------------------------------------------------------------
 
 def load_pdfs(pdf_dir: str) -> list[dict]:
@@ -119,15 +109,16 @@ def load_pdfs(pdf_dir: str) -> list[dict]:
     for filename in os.listdir(pdf_dir):
         if not filename.endswith(".pdf"):
             continue
-        doc = fitz.open(os.path.join(pdf_dir, filename))
-        for page_num, page in enumerate(doc):
-            raw_text = page.get_text()
+        reader = PdfReader(os.path.join(pdf_dir, filename))
+        for page_num, page in enumerate(reader.pages):
+            raw_text = page.extract_text() or ""
             cleaned = preprocess_pdf_text(raw_text)
             documents.append({"doc": filename, "page": page_num, "text": cleaned})
     return documents
 
+
 # ---------------------------------------------------------------------------
-# Chunking
+# Chunking  (unchanged)
 # ---------------------------------------------------------------------------
 
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
@@ -147,7 +138,7 @@ def chunk_documents(docs: list[dict]) -> list[dict]:
         for i, chunk in enumerate(chunk_text(doc["text"])):
             all_chunks.append(
                 {
-                    "faiss_id": global_chunk_id,
+                    "faiss_id": global_chunk_id,  # kept for schema compat
                     "doc": doc["doc"],
                     "page": doc["page"],
                     "chunk": i,
@@ -159,135 +150,99 @@ def chunk_documents(docs: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Embedding & FAISS index
+# BM25 index  — replaces SentenceTransformer + FAISS
 # ---------------------------------------------------------------------------
 
-def build_index(chunks: list[dict]) -> tuple[SentenceTransformer, faiss.Index]:
-    print("Building FAISS index…")
-    embedder = SentenceTransformer("all-MiniLM-L6-v2")
-    texts = [c["text"] for c in chunks]
-    embeddings = embedder.encode(texts, convert_to_numpy=True, show_progress_bar=True)
-    index = faiss.IndexFlatL2(embeddings.shape[1])
-    index.add(embeddings)
-    print(f"Indexed {len(chunks)} chunks.")
-    return embedder, index
+def build_index(chunks: list[dict]) -> BM25Okapi:
+    """Tokenise all chunks and build a BM25 index.
 
-
-# ---------------------------------------------------------------------------
-# Ollama inference
-# ---------------------------------------------------------------------------
-
-OLLAMA_BASE_URL = "http://localhost:11434"
-
-OLLAMA_MODEL = "llama3.2:latest"
-
-def check_ollama_running() -> bool:
-    try:
-        r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-        return r.status_code == 200
-    except requests.ConnectionError:
-        return False
-
-
-def list_ollama_models() -> list[str]:
-    try:
-        r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
-        r.raise_for_status()
-        return [m["name"] for m in r.json().get("models", [])]
-    except Exception as exc:
-        print(f"Could not list Ollama models: {exc}")
-        return []
-
-
-def generate_answer_ollama(
-    question: str,
-    context: str,
-    model: str = OLLAMA_MODEL,
-    temperature: float = 0.1,
-) -> tuple[str, dict]:
-    """Call Ollama and return (answer_text, timing_dict).
-
-    timing_dict contains:
-        total_s        — wall-clock time for the whole HTTP request
-        prompt_tokens  — tokens in the prompt  (from Ollama metadata)
-        eval_tokens    — tokens generated       (from Ollama metadata)
-        tokens_per_s   — generation throughput
+    Returns the BM25Okapi object (no embedder needed).
     """
-    prompt = (
-        "You are an expert on Economics. "
-        "Using the context retrieved from relevant papers, answer the question below.\n\n"
-        f"Context:\n{context}\n\n"
-        f"Question:\n{question}\n\n"
-        "If you do not know the answer, say so. "
-        "Provide ONLY the answer — no question, no context, no explanation."
-    )
-
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": temperature,
-            "num_predict": 1000, # change this back to 300 for models other than deepseek
-        },
-    }
-
-    t0 = time.perf_counter()
-    try:
-        ## for models other than deepseek:
-        response = requests.post(
-            f"{OLLAMA_BASE_URL}/api/generate",
-            json=payload,
-            timeout=120,
-        )
-        response.raise_for_status()
-        data = response.json()
-    except requests.Timeout:
-        return "Error: Ollama request timed out.", {}
-    except Exception as exc:
-        return f"Error calling Ollama: {exc}", {}
-    finally:
-        total_s = time.perf_counter() - t0
-
-    # for models other than deepseek:
-    answer = data.get("response", "").strip()
-    if not answer:
-            print("⚠️ Empty response from Ollama")
-            print(data)
-
-
-    # Ollama returns token counts and durations in nanoseconds
-    prompt_tokens = data.get("prompt_eval_count", 0)
-    eval_tokens   = data.get("eval_count", 0)
-    eval_ns       = data.get("eval_duration", 0)
-    tokens_per_s  = (eval_tokens / eval_ns * 1e9) if eval_ns else 0.0
-
-    timing = {
-        "total_s":       round(total_s, 2),
-        "prompt_tokens": prompt_tokens,
-        "eval_tokens":   eval_tokens,
-        "tokens_per_s":  round(tokens_per_s, 1),
-    }
-    return answer, timing
+    print("Building BM25 index…")
+    tokenised = [c["text"].lower().split() for c in chunks]
+    index = BM25Okapi(tokenised)
+    print(f"Indexed {len(chunks)} chunks.")
+    return index
 
 
 # ---------------------------------------------------------------------------
-# Retrieval
+# Retrieval  — BM25 instead of dense vector search
 # ---------------------------------------------------------------------------
 
 def retrieve(
     query: str,
-    embedder: SentenceTransformer,
-    index: faiss.Index,
+    index: BM25Okapi,
     all_chunks: list[dict],
     k: int = 10,
 ) -> tuple[list[dict], float]:
     """Return (retrieved_chunks, retrieval_time_s)."""
     t0 = time.perf_counter()
-    query_embedding = embedder.encode([query], convert_to_numpy=True)
-    _, indices = index.search(query_embedding, k)
+    tokenised_query = query.lower().split()
+    scores = index.get_scores(tokenised_query)
+
+    # argsort descending, take top-k
+    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
     elapsed = time.perf_counter() - t0
-    return [all_chunks[i] for i in indices[0]], round(elapsed, 4)
+    return [all_chunks[i] for i in top_indices], round(elapsed, 4)
+
+
+# ---------------------------------------------------------------------------
+# Anthropic API inference  — replaces Ollama
+# ---------------------------------------------------------------------------
+
+# Set ANTHROPIC_API_KEY in your environment / Heroku config vars.
+_anthropic_client: anthropic.Anthropic | None = None
+
+
+def _get_client() -> anthropic.Anthropic:
+    global _anthropic_client
+    if _anthropic_client is None:
+        _anthropic_client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
+    return _anthropic_client
+
+
+ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"  # fast + cheap; swap to sonnet if needed
+
+
+def generate_answer_anthropic(
+    question: str,
+    context: str,
+    model: str = ANTHROPIC_MODEL,
+    temperature: float = 0.1,
+) -> tuple[str, dict]:
+    """Call the Anthropic Messages API and return (answer_text, timing_dict)."""
+    system_prompt = (
+        "You are an expert on Economics. "
+        "Using the context retrieved from relevant papers, answer the question. "
+        "If you do not know the answer, say so. "
+        "Provide ONLY the answer — no question, no context, no explanation."
+    )
+    user_message = f"Context:\n{context}\n\nQuestion:\n{question}"
+
+    t0 = time.perf_counter()
+    try:
+        message = _get_client().messages.create(
+            model=model,
+            max_tokens=1024,
+            temperature=temperature,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+        )
+    except Exception as exc:
+        return f"Error calling Anthropic API: {exc}", {}
+    finally:
+        total_s = time.perf_counter() - t0
+
+    answer = message.content[0].text.strip() if message.content else ""
+
+    timing = {
+        "total_s":       round(total_s, 2),
+        "prompt_tokens": message.usage.input_tokens,
+        "eval_tokens":   message.usage.output_tokens,
+        # Anthropic doesn't expose per-call throughput, so we estimate
+        "tokens_per_s":  round(message.usage.output_tokens / max(total_s, 0.001), 1),
+    }
+    return answer, timing
 
 
 # ---------------------------------------------------------------------------
@@ -296,19 +251,18 @@ def retrieve(
 
 def generate_answer(
     question: str,
-    embedder: SentenceTransformer,
-    index: faiss.Index,
+    index: BM25Okapi,
     all_chunks: list[dict],
     k: int = 5,
-    model: str = OLLAMA_MODEL,
+    model: str = ANTHROPIC_MODEL,
 ) -> tuple[str, list[str], dict]:
     """Return (answer, source_docs, per_question_timings)."""
     try:
-        retrieved, retrieval_s = retrieve(question, embedder, index, all_chunks, k=k)
+        retrieved, retrieval_s = retrieve(question, index, all_chunks, k=k)
         source_docs = [chunk["doc"] for chunk in retrieved]
         context = "\n\n".join(chunk["text"] for chunk in retrieved)
 
-        answer, gen_timing = generate_answer_ollama(question, context, model=model)
+        answer, gen_timing = generate_answer_anthropic(question, context, model=model)
 
         timings = {
             "retrieval_s":   retrieval_s,
@@ -324,154 +278,31 @@ def generate_answer(
         print("RAG error:", exc)
         return "Error generating response", [], {}
 
+
 def extract_answer(text: str) -> str:
     match = re.search(r"Answer:\s*(.*)", text, re.DOTALL)
     return match.group(1).strip() if match else text.strip()
 
-def query_rag(question: str):
-    if not check_ollama_running():
-        raise RuntimeError(
-            "Ollama is not running! Start it with:  ollama serve\n"
-            "Then pull a model with:  ollama pull mistral"
-        )
 
-    print(f"Using Ollama model: {OLLAMA_MODEL}\n")
+# ---------------------------------------------------------------------------
+# Public entry point  (same signature as before)
+# ---------------------------------------------------------------------------
+
+def query_rag(question: str) -> str:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY environment variable is not set.\n"
+            "Add it to your Heroku config:  heroku config:set ANTHROPIC_API_KEY=sk-..."
+        )
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     papers_dir = os.path.join(BASE_DIR, "econ_papers")
 
     documents = load_pdfs(papers_dir)
     all_chunks = chunk_documents(documents)
-    embedder, faiss_index = build_index(all_chunks)
+    bm25_index = build_index(all_chunks)
 
-    answer, source_docs, timings = generate_answer(
-            question, embedder, faiss_index, all_chunks, model=OLLAMA_MODEL
-        )
+    answer, _source_docs, _timings = generate_answer(
+        question, bm25_index, all_chunks, model=ANTHROPIC_MODEL
+    )
     return answer
-
-# ---------------------------------------------------------------------------
-# Post-processing
-# ---------------------------------------------------------------------------
-
-
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-# if __name__ == "__main__":
-
-#     # ── Sanity-check Ollama ──────────────────────────────────────────────
-#     if not check_ollama_running():
-#         raise RuntimeError(
-#             "Ollama is not running! Start it with:  ollama serve\n"
-#             "Then pull a model with:  ollama pull mistral"
-#         )
-
-#     available_models = list_ollama_models()
-#     print(f"Available Ollama models: {available_models}")
-
-#     if OLLAMA_MODEL not in available_models:
-#         raise RuntimeError(
-#             f"Model '{OLLAMA_MODEL}' is not pulled yet.\n"
-#             f"Run:  ollama pull {OLLAMA_MODEL}"
-#         )
-
-#     print(f"Using Ollama model: {OLLAMA_MODEL}\n")
-
-#     # ── PDF loading ──────────────────────────────────────────────────────
-#     with Timer("PDF loading"):
-#         documents = load_pdfs("../papers")
-
-#     # ── Chunking ─────────────────────────────────────────────────────────
-#     with Timer("Chunking"):
-#         all_chunks = chunk_documents(documents)
-#     print(f"  Total chunks: {len(all_chunks)}")
-
-#     # ── FAISS index ──────────────────────────────────────────────────────
-#     with Timer("Embedding + FAISS index"):
-#         embedder, faiss_index = build_index(all_chunks)
-
-    # ── Q&A loop ─────────────────────────────────────────────────────────
-    # questions = [
-    #     "What is the Quantity Theory of Money?",
-    #     "What did Friedman mean by a 'Counter-Revolution in Monetary Theory'?",
-    #     "What caused the Great Depression?",
-    #     "What is Monetarism?",
-    #     "What causes inflation?",
-    #     "What caused the inflation episode in 2022 and early 2023"
-    # ]
-
-    # DOC_MAPPING = {f"{i}.pdf": f"PE{i}" for i in range(1, 11)}
-
-    # rows = []
-    # qa_loop_start = time.perf_counter()
-
-    # for idx, question in enumerate(questions, 1):
-    #     print(f"\nQ{idx}/{len(questions)}: {question}")
-
-    #     answer, source_docs, timings = query_rag(
-    #         question, embedder, faiss_index, all_chunks, model=OLLAMA_MODEL
-    #     )
-
-    #     print("Printing the answer:")
-    #     print(answer)
-    #     print("Done printing the answer....... ")
-
-    #     # Per-question timing breakdown
-    #     print(
-    #         f"  retrieval={timings.get('retrieval_s', 0):.4f}s | "
-    #         f"generation={timings.get('generation_s', 0):.2f}s | "
-    #         f"total={timings.get('total_s', 0):.2f}s | "
-    #         f"tokens_generated={timings.get('eval_tokens', 0)} | "
-    #         f"speed={timings.get('tokens_per_s', 0):.1f} tok/s"
-    #     )
-    #     # print(f"  A: {answer[:120]}…")
-
-    #     rows.append(
-    #         {
-    #             "Question":       question,
-    #             "Answer":         answer,
-    #             "Extracted from": [DOC_MAPPING.get(d, d) for d in source_docs],
-    #             "Retrieval (s)":  timings.get("retrieval_s", 0),
-    #             "Generation (s)": timings.get("generation_s", 0),
-    #             "Total (s)":      timings.get("total_s", 0),
-    #             "Prompt tokens":  timings.get("prompt_tokens", 0),
-    #             "Output tokens":  timings.get("eval_tokens", 0),
-    #             "Tokens/s":       timings.get("tokens_per_s", 0),
-    #         }
-    #     )
-
-    # total_qa_time = time.perf_counter() - qa_loop_start
-
-    # ── Summary stats ─────────────────────────────────────────────────────
-    # df = pd.DataFrame(rows)
-    # # df["Answer"] = df["Answer"].apply(extract_answer)
-
-    # mapping = {
-    #     "paper1.pdf": "EI1",
-    #     "paper2.pdf": "EI2",
-    #     "paper3.pdf": "EI3"
-    # }
-
-    # df["Extracted from"] = df["Extracted from"].apply(
-    #     lambda lst: [mapping.get(item, item) for item in lst]
-    # )
-
-    # print("\n" + "=" * 60)
-    # print("TIMING SUMMARY")
-    # print("=" * 60)
-    # print(f"  Total Q&A time          : {total_qa_time:.2f}s")
-    # print(f"  Questions answered      : {len(questions)}")
-    # print(f"  Avg time per question   : {total_qa_time / len(questions):.2f}s")
-    # print(f"  Avg retrieval time      : {df['Retrieval (s)'].mean():.4f}s")
-    # print(f"  Avg generation time     : {df['Generation (s)'].mean():.2f}s")
-    # print(f"  Avg output tokens       : {df['Output tokens'].mean():.1f}")
-    # print(f"  Avg speed               : {df['Tokens/s'].mean():.1f} tok/s")
-    # print(f"  Slowest question        : {df.loc[df['Total (s)'].idxmax(), 'Question']}")
-    # print(f"  Fastest question        : {df.loc[df['Total (s)'].idxmin(), 'Question']}")
-    # print("=" * 60)
-
-    # df.to_csv("./generated_responses/llama_responses.csv", index=False)
-    # print("\nSaved results (with timings) to llama_responses.csv")
