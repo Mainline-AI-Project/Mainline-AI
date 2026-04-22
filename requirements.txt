@@ -44,8 +44,8 @@ typing_extensions==4.13.2
 # ======================
 # BASIC UTILITIES
 # ======================
-numpy==2.1.0
-pandas==3.0.2
+# numpy==2.1.0
+# pandas==3.0.2
 tqdm==4.67.1
 joblib==1.4.2
 Werkzeug==3.0.3
@@ -68,9 +68,9 @@ proxy-middleware
 # ======================
 # RAG
 # ======================
-# pypdf==6.7.1
-# faiss-cpu
-# PyMuPDF
+pypdf==6.7.1
 # torch
-# sentence-transformers
+faiss-cpu
+PyMuPDF
+sentence-transformers
 
