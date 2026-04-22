@@ -296,7 +296,7 @@ def query_rag(question: str) -> str:
         )
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    papers_dir = os.path.join(BASE_DIR, "econ_papers")
+    papers_dir = os.path.join(BASE_DIR, "papers")
 
     documents = load_pdfs(papers_dir)
     all_chunks = chunk_documents(documents)
