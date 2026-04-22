@@ -1,6 +1,7 @@
 import jwt
 from datetime import datetime, timedelta
 from django.conf import settings
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 def create_jwt(user):
     payload = {
@@ -10,3 +11,6 @@ def create_jwt(user):
         "exp": datetime.utcnow() + timedelta(hours=24)
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+
+token_generator = PasswordResetTokenGenerator()

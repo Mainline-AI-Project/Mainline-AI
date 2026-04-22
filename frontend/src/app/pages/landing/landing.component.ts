@@ -159,6 +159,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-landing',
@@ -198,6 +199,7 @@ export class LandingComponent {
   constructor(
     private auth: AuthService,
     private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   // ---------------- LABEL ----------------
@@ -364,15 +366,21 @@ checkPasswordMatch() {
     return /@.+\.(edu|ac(\.[a-z]{2})?)$/i.test(email);
   }
 
+  uid: string = '';
 
   ngOnInit(): void {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
-  if (token) {
-    this.resetToken = token;
-    this.step = 'reset';      // new step name (see template below)
-  }
+  // if (token) {
+  //   this.resetToken = token;
+  //   this.step = 'reset';      // new step name (see template below)   
+  // }
+  this.uid = this.route.snapshot.paramMap.get('uid') || '';
+  this.resetToken = this.route.snapshot.paramMap.get('token') || '';
+  
 }
+
+
 
 goToForgotPassword(): void {
   this.step = 'forgot';       // new step name
@@ -392,22 +400,54 @@ submitForgotPassword(): void {
 
 submitResetPassword(): void {
   if (this.resetForm.password !== this.resetForm.confirmPassword) {
-    this.error = 'Passwords do not match.'; return;
+    this.error = 'Passwords do not match.';
+    return;
   }
+
   if (this.resetForm.password.length < 8) {
-    this.error = 'Password must be at least 8 characters.'; return;
+    this.error = 'Password must be at least 8 characters.';
+    return;
   }
+
+  if (!this.uid || !this.resetToken) {
+    this.error = 'Invalid or expired reset link.';
+    return;
+  }
+
   this.error = '';
 
-  this.auth.resetPassword(this.resetToken, this.resetForm.password).subscribe({
+  this.auth.resetPassword(this.uid, this.resetToken, this.resetForm.password).subscribe({
     next: () => {
       this.step = 'auth';
       this.mode = 'login';
-      // Optionally show a success banner here
+      this.error = '';
+      // Optional: show success message
     },
-    error: (err) => { this.error = err.error?.error || 'Something went wrong.'; }
+    error: (err) => {
+      this.error = err.error?.error || 'Reset link is invalid or expired.';
+    }
   });
 }
+
+
+// submitResetPassword(): void {
+//   if (this.resetForm.password !== this.resetForm.confirmPassword) {
+//     this.error = 'Passwords do not match.'; return;
+//   }
+//   if (this.resetForm.password.length < 8) {
+//     this.error = 'Password must be at least 8 characters.'; return;
+//   }
+//   this.error = '';
+
+//   this.auth.resetPassword(this.resetToken, this.resetForm.password).subscribe({
+//     next: () => {
+//       this.step = 'auth';
+//       this.mode = 'login';
+//       // Optionally show a success banner here
+//     },
+//     error: (err) => { this.error = err.error?.error || 'Something went wrong.'; }
+//   });
+// }
 }
 
 

@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 from .views import (
     signup_user, login_user, get_chats, start_new_chat,
-    add_message, delete_chat, pin_chat
+    add_message, delete_chat, pin_chat, forgot_password, reset_password
 )
 
 urlpatterns = [
@@ -14,6 +14,8 @@ urlpatterns = [
     path("chats/<str:username>/<str:chat_id>/delete/", delete_chat),
     path("chats/<str:username>/<str:chat_id>/pin/", pin_chat),
     path("query/", views.rag_query),          # ← removed duplicate 'api/' prefix
-    path("forgot-password/", views.forgot_password),   # ← was missing
-    path("reset-password/", views.reset_password),     # ← was missing
+    path('auth/forgot-password/', forgot_password),
+    path('auth/reset-password/', reset_password),
+    # path("forgot-password/", views.forgot_password),   # ← was missing
+    # path("reset-password/", views.reset_password),     # ← was missing
 ]

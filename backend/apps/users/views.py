@@ -479,6 +479,12 @@ from .models import User, Chat, Message
 from .jwt_utils import create_jwt
 from .rag import query_rag
 import logging
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import User
+from .utils import token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 
 
 @csrf_exempt
@@ -651,76 +657,51 @@ def rag_query(request):
         return JsonResponse({"response": response_text})
     return JsonResponse({"error": "POST only"}, status=400)
 
-logger = logging.getLogger(__name__)
-
 @csrf_exempt
-@require_POST
 def forgot_password(request):
-    try:
+    if request.method == 'POST':
         data = json.loads(request.body)
-        email = data.get("email", "").strip().lower()
-    except (json.JSONDecodeError, AttributeError):
-        return JsonResponse({"error": "Invalid request body."}, status=400)
+        email = data.get('email')
 
-    if not email:
-        return JsonResponse({"error": "Email is required."}, status=400)
+        try:
+            user = User.objects.get(email=email)
 
-    try:
-        user = User.objects.get(email=email)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = token_generator.make_token(user)
 
-        token = user.generate_reset_token()
-        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+            reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
 
-        send_mail(
-            subject="Reset your Mainline-AI password",
-            message=(
-                f"Hi {user.name or user.username},\n\n"
-                f"Reset your password:\n{reset_url}\n\n"
-                f"Expires in 1 hour."
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,  # 🔥 IMPORTANT
-        )
+            send_mail(
+                'Password Reset Request',
+                f'Click the link to reset your password:\n{reset_link}',
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
 
-        logger.info(f"Password reset email sent to {user.email}")
-
-    except User.DoesNotExist:
-        # still don't reveal
-        pass
-    except Exception as e:
-        logger.error(f"EMAIL FAILURE: {str(e)}")
-        return JsonResponse({"error": "Email service failed"}, status=500)
-
-    return JsonResponse({
-        "message": "If that email is registered, a reset link has been sent."
-    })
-
+            return JsonResponse({'message': 'Email sent'})
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=404)
 
 @csrf_exempt
-@require_POST
 def reset_password(request):
-    try:
+    if request.method == 'POST':
         data = json.loads(request.body)
-        token = data.get("token", "").strip()
-        new_password = data.get("password", "")
-    except (json.JSONDecodeError, AttributeError):
-        return JsonResponse({"error": "Invalid request body."}, status=400)
 
-    if not token or not new_password:
-        return JsonResponse({"error": "Token and password are required."}, status=400)
+        uid = data.get('uid')
+        token = data.get('token')
+        password = data.get('password')
 
-    if len(new_password) < 8:
-        return JsonResponse({"error": "Password must be at least 8 characters."}, status=400)
+        try:
+            user_id = urlsafe_base64_decode(uid).decode()
+            user = User.objects.get(pk=user_id)
 
-    try:
-        user = User.objects.get(reset_token=token)
-    except Exception:
-        return JsonResponse({"error": "Invalid or expired reset link."}, status=400)
+            if token_generator.check_token(user, token):
+                user.password = make_password(password)
+                user.save()
+                return JsonResponse({'message': 'Password reset successful'})
+            else:
+                return JsonResponse({'error': 'Invalid token'}, status=400)
 
-    if not user.is_reset_token_valid(token):
-        return JsonResponse({"error": "This reset link has expired."}, status=400)
-
-    user.set_password(new_password)
-    user.clear_reset_token()
-    return JsonResponse({"message": "Password updated successfully."})
+        except Exception:
+            return JsonResponse({'error': 'Invalid request'}, status=400)
