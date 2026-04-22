@@ -675,21 +675,22 @@ def forgot_password(request):
             subject="Reset your Mainline-AI password",
             message=(
                 f"Hi {user.name or user.username},\n\n"
-                f"Reset your password here:\n\n{reset_url}\n\n"
-                f"This link expires in 1 hour."
+                f"Reset your password:\n{reset_url}\n\n"
+                f"Expires in 1 hour."
             ),
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
-            fail_silently=False,  # IMPORTANT
+            fail_silently=False,  # 🔥 IMPORTANT
         )
 
-    except User.DoesNotExist:
-        # security: don't reveal user existence
-        pass
+        logger.info(f"Password reset email sent to {user.email}")
 
+    except User.DoesNotExist:
+        # still don't reveal
+        pass
     except Exception as e:
-        logger.error(f"EMAIL FAILED: {str(e)}")
-        return JsonResponse({"error": "Email service failed."}, status=500)
+        logger.error(f"EMAIL FAILURE: {str(e)}")
+        return JsonResponse({"error": "Email service failed"}, status=500)
 
     return JsonResponse({
         "message": "If that email is registered, a reset link has been sent."

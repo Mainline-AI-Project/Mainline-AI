@@ -137,8 +137,7 @@ EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
 
 DEFAULT_FROM_EMAIL = 'Mainline AI <no-reply@mainline-ai.com>'
 
-FRONTEND_URL = 'https://mainline-ai-bf583cb75ac1.herokuapp.com/'
-
+FRONTEND_URL = 'https://mainline-ai-bf583cb75ac1.herokuapp.com'
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = 'smtp.gmail.com'
