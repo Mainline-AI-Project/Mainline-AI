@@ -12,8 +12,10 @@ urlpatterns = [
     path("api/users/", include("apps.users.urls")),
     path("api/", include("api.urls")),
     path('api/query/', rag_query),
-    path("api/auth/forgot-password/", views.forgot_password, name="forgot_password"),
-    path("api/auth/reset-password/",  views.reset_password,  name="reset_password"),
+    # path("api/auth/forgot-password/", views.forgot_password, name="forgot_password"),
+    # path("api/auth/reset-password/",  views.reset_password,  name="reset_password"),
+    path('auth/forgot-password/', views.forgot_password),
+    path('auth/reset-password/', views.reset_password),
     path('admin/', admin.site.urls),
 
  # Angular fallback LAST
