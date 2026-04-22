@@ -14,8 +14,8 @@ urlpatterns = [
     path("chats/<str:username>/<str:chat_id>/delete/", delete_chat),
     path("chats/<str:username>/<str:chat_id>/pin/", pin_chat),
     path("query/", views.rag_query),          # ← removed duplicate 'api/' prefix
-    path('auth/forgot-password/', forgot_password),
-    path('auth/reset-password/', reset_password),
+    path('forgot-password/', forgot_password),
+    path('reset-password/', reset_password),
     # path("forgot-password/", views.forgot_password),   # ← was missing
     # path("reset-password/", views.reset_password),     # ← was missing
 ]
