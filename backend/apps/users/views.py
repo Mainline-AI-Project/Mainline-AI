@@ -658,29 +658,31 @@ def rag_query(request):
 
 @csrf_exempt
 def forgot_password(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        email = data.get('email')
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
 
-        try:
-            user = User.objects.get(email=email)
+    data = json.loads(request.body)
+    email = data.get("email")
 
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = token_generator.make_token(user)
+    try:
+        user = User.objects.get(email=email)
 
-            reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = token_generator.make_token(user)
 
-            send_mail(
-                'Password Reset Request',
-                f'Click the link to reset your password:\n{reset_link}',
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
-            )
+        reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
 
-            return JsonResponse({'message': 'Email sent'})
-        except User.DoesNotExist:
-            return JsonResponse({'message': 'User not found'}, status=404)
+        send_mail(
+            "Password Reset Request",
+            f"Click here to reset your password:\n{reset_link}",
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+        )
+
+        return JsonResponse({"message": "Email sent"})
+
+    except User.DoesNotExist:
+        return JsonResponse({"message": "If email exists, reset link sent"})  # security best practice
 
 @csrf_exempt
 def reset_password(request):

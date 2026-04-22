@@ -63,7 +63,8 @@ scipy==1.15.2
 rich==14.0.0
 colorama==0.4.6
 proxy-middleware
-
+dj-database-url
+psycopg2-binary
 
 # ======================
 # RAG
