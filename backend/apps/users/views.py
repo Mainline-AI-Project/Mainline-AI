@@ -542,30 +542,39 @@ def forgot_password(request):
     if not email:
         return JsonResponse({"error": "Email is required"}, status=400)
 
+    user = User.objects(email=email).first()
+
+    # Always return same response (security best practice)
+    if not user:
+        return JsonResponse({
+            "message": "If that email exists, a reset link was sent"
+        })
+
     try:
-        user = User.objects(email=email).first()
+        token = user.generate_reset_token()
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
 
-        if user:
-            token = user.generate_reset_token()
-            reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        print("📧 Sending email to:", user.email)
+        print("📧 Reset URL:", reset_url)
 
-            send_mail(
-                subject="Reset your password",
-                message=f"Reset your password:\n{reset_url}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
+        send_mail(
+            subject="Reset your password",
+            message=f"Reset your password:\n{reset_url}",
+            from_email="no-reply@buckingham.ac.uk",  # IMPORTANT FIX
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
 
-            logger.info(f"Reset email sent to {user.email}")
+        print("✅ send_mail executed")
 
     except Exception as e:
-        logger.error(f"EMAIL ERROR: {str(e)}")
+        print("❌ EMAIL ERROR:", str(e))
         return JsonResponse({"error": "Email failed"}, status=500)
 
     return JsonResponse({
         "message": "If that email exists, a reset link was sent"
     })
+
 
 
 @csrf_exempt
