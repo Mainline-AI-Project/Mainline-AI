@@ -141,7 +141,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-DEFAULT_FROM_EMAIL = 'no-reply <madara.dassanayakemu@buckingham.ac.uk>'
+DEFAULT_FROM_EMAIL = 'Madara Dassanayake <madara.dassanayakemu@buckingham.ac.uk>'
 EMAIL_HOST_USER = 'apikey'
 EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
 EMAIL_HOST = 'smtp.sendgrid.net'
