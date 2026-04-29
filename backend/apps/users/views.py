@@ -310,6 +310,7 @@ import uuid
 import json
 import traceback
 import logging
+from django.utils import timezone
 
 from .models import User, Chat, Message
 from .jwt_utils import create_jwt
@@ -533,39 +534,68 @@ def rag_query(request):
 @csrf_exempt
 @require_POST
 def forgot_password(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST only"}, status=405)
+
+    # -----------------------
+    # Parse request safely
+    # -----------------------
     try:
-        data = json.loads(request.body)
-        email = data.get("email", "").strip().lower()
-    except:
-        return JsonResponse({"error": "Invalid request body"}, status=400)
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+    email = (data.get("email") or "").strip().lower()
 
     if not email:
         return JsonResponse({"error": "Email is required"}, status=400)
 
+    # -----------------------
+    # Always return same response (security)
+    # -----------------------
+    generic_response = {
+        "message": "If that email exists, a reset link was sent"
+    }
+
     try:
         user = User.objects(email=email).first()
 
-        if user:
-            token = user.generate_reset_token()
-            reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        if not user:
+            return JsonResponse(generic_response)
 
-            send_mail(
-                subject="Reset your password",
-                message=f"Reset your password:\n{reset_url}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
+        # -----------------------
+        # Generate token
+        # -----------------------
+        token = user.generate_reset_token()
 
-            logger.info(f"Reset email sent to {user.email}")
+        # IMPORTANT: ensure token persists
+        user.save()
+
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
+        # -----------------------
+        # Send email
+        # -----------------------
+        result = send_mail(
+            subject="Reset your password",
+            message=(
+                "You requested a password reset.\n\n"
+                f"Reset your password here:\n{reset_url}\n\n"
+                "If you did not request this, ignore this email."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        logger.info(f"Password reset email sent to {user.email}, result={result}")
+
+        return JsonResponse(generic_response)
 
     except Exception as e:
-        logger.error(f"EMAIL ERROR: {str(e)}")
-        return JsonResponse({"error": "Email failed"}, status=500)
+        logger.exception("Forgot password error")
+        return JsonResponse({"error": "Internal server error"}, status=500)
 
-    return JsonResponse({
-        "message": "If that email exists, a reset link was sent"
-    })
 
 
 @csrf_exempt
