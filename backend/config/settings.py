@@ -140,14 +140,15 @@ CORS_ALLOW_ALL_ORIGINS = True
 # -----------------------------
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
+
+EMAIL_HOST = 'smtp.office365.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = 'apikey'
-EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
+EMAIL_HOST_USER = 'madara.dassanayakemu@buckingham.ac.uk'
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
-DEFAULT_FROM_EMAIL = 'Mainline AI <no-reply@mainline-ai.com>'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 FRONTEND_URL = 'https://mainline-ai-bf583cb75ac1.herokuapp.com'
 
