@@ -368,16 +368,15 @@ checkPasswordMatch() {
 
   uid: string = '';
 
-  ngOnInit(): void {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
-  // if (token) {
-  //   this.resetToken = token;
-  //   this.step = 'reset';      // new step name (see template below)   
-  // }
-  this.uid = this.route.snapshot.paramMap.get('uid') || '';
-  this.resetToken = this.route.snapshot.paramMap.get('token') || '';
-  
+ ngOnInit(): void {
+  const uid = this.route.snapshot.queryParamMap.get('uid');
+  const token = this.route.snapshot.queryParamMap.get('token');
+
+  if (uid && token) {
+    this.uid = uid;
+    this.resetToken = token;
+    this.step = 'reset';
+  }
 }
 
 
