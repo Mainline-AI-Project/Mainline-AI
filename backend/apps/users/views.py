@@ -316,6 +316,7 @@ from django.utils import timezone
 from .models import User, Chat, Message
 from .jwt_utils import create_jwt
 from .rag import query_rag
+from django.core.mail import EmailMultiAlternatives
 
 logger = logging.getLogger(__name__)
 
@@ -567,14 +568,64 @@ def forgot_password(request):
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
 
         logger.info(f"Sending password reset email to {email}")
+        
+        subject = "🔐 Reset Your Password - Mainline AI"
 
-        send_mail(
-            subject="Reset your password",
-            message=f"Reset your password:\n{reset_url}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
+        from_email = settings.DEFAULT_FROM_EMAIL
+        to_email = [email]
+
+        text_content = f"""
+        Reset your password
+
+        Use the link below to reset your password:
+        {reset_url}
+
+        If you did not request this, ignore this email.
+        """
+
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2 style="color:#333;">Reset Your Password</h2>
+
+            <p>We received a request to reset your password.</p>
+
+            <p>
+            Click the button below to reset it:
+            </p>
+
+            <p>
+            <a href="{reset_url}"
+                style="
+                    display:inline-block;
+                    padding:12px 20px;
+                    background-color:#4F46E5;
+                    color:white;
+                    text-decoration:none;
+                    border-radius:6px;
+                    font-weight:bold;
+                ">
+                Reset Password
+            </a>
+            </p>
+
+            <p style="color:#666;font-size:13px;">
+            If the button doesn't work, copy and paste this link:<br>
+            <a href="{reset_url}">{reset_url}</a>
+            </p>
+
+            <hr>
+
+            <p style="color:#999;font-size:12px;">
+            If you did not request this, you can safely ignore this email.
+            </p>
+        </body>
+        </html>
+        """
+
+        msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
 
         logger.info(f"Password reset email successfully queued for {email}")
 
