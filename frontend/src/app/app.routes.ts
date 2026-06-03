@@ -14,8 +14,8 @@ export const routes: Routes = [
     { path: 'login', component: LandingComponent },
     { path: 'signup', component: LandingComponent },
     { path: 'select-plan', component: LandingComponent },
-
     { path: 'chat', component: ChatComponent, canActivate: [authGuard] },
+    {path: 'reset-password', component: LandingComponent},
     { path: '**', redirectTo: '' },
-    {path: 'reset-password', component: LandingComponent}
+    
 ]
